@@ -25,10 +25,7 @@ export default function NavLinks() {
         <nav aria-label="Main navigation">
             <ul className="flex flex-wrap gap-2">
                 {links.map((link) => {
-                    const isActive =
-                        link.href === "/"
-                            ? pathname === "/"
-                            : pathname.startsWith(link.href);
+                    const isActive = pathname === link.href;
 
                     return (
                         <li key={link.href}>
