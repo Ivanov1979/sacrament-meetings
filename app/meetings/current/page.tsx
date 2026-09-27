@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getMeetings } from "@/lib/meetings-db";
 
-export default function CurrentMeetingPage() {
+export default async function CurrentMeetingPage() {
     const today = new Date();
 
     const sunday = new Date(today);
@@ -13,7 +13,8 @@ export default function CurrentMeetingPage() {
         String(sunday.getDate()).padStart(2, "0"),
     ].join("-");
 
-    const meeting = getMeetings(sundayDate)[0];
+    const meetings = await getMeetings(sundayDate);
+    const meeting = meetings[0];
 
     if (!meeting) {
         redirect("/meetings");
