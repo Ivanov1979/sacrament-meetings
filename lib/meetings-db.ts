@@ -33,6 +33,12 @@ interface MeetingRow {
 }
 
 /**
+ * Input used when creating or updating a meeting.
+ * The database generates the meeting ID.
+ */
+export type MeetingInput = Omit<SacramentMeeting, "id">;
+
+/**
  * Converts a PostgreSQL DATE value into the YYYY-MM-DD
  * format expected by the application.
  */
@@ -112,4 +118,102 @@ export async function getMeetingById(
     const meeting = (rows as unknown as MeetingRow[])[0];
 
     return meeting ? mapMeeting(meeting) : null;
+}
+
+/**
+ * Creates a new sacrament meeting.
+ */
+export async function createMeeting(
+    meeting: MeetingInput
+): Promise<SacramentMeeting> {
+    const rows = await sql`
+        INSERT INTO meetings (
+            date,
+            meeting_type,
+            presiding,
+            conducting,
+            announcements,
+            opening_hymn,
+            opening_prayer,
+            ward_business,
+            stake_business,
+            sacrament_hymn,
+            speakers,
+            closing_hymn,
+            closing_prayer
+        )
+        VALUES (
+            ${meeting.date},
+            ${meeting.meetingType},
+            ${meeting.presiding},
+            ${meeting.conducting},
+            ${JSON.stringify(meeting.announcements ?? [])}::jsonb,
+            ${JSON.stringify(meeting.openingHymn)}::jsonb,
+            ${meeting.openingPrayer},
+            ${JSON.stringify(meeting.wardBusiness)}::jsonb,
+            ${meeting.stakeBusiness},
+            ${JSON.stringify(meeting.sacramentHymn)}::jsonb,
+            ${JSON.stringify(meeting.speakers)}::jsonb,
+            ${JSON.stringify(meeting.closingHymn)}::jsonb,
+            ${meeting.closingPrayer}
+        )
+        RETURNING *
+    `;
+
+    const row = (rows as unknown as MeetingRow[])[0];
+
+    return mapMeeting(row);
+}
+
+/**
+ * Updates an existing sacrament meeting.
+ */
+export async function updateMeeting(
+    id: number,
+    meeting: MeetingInput
+): Promise<SacramentMeeting | null> {
+    const rows = await sql`
+        UPDATE meetings
+        SET
+            date = ${meeting.date},
+            meeting_type = ${meeting.meetingType},
+            presiding = ${meeting.presiding},
+            conducting = ${meeting.conducting},
+            announcements =
+                ${JSON.stringify(meeting.announcements ?? [])}::jsonb,
+            opening_hymn =
+                ${JSON.stringify(meeting.openingHymn)}::jsonb,
+            opening_prayer = ${meeting.openingPrayer},
+            ward_business =
+                ${JSON.stringify(meeting.wardBusiness)}::jsonb,
+            stake_business = ${meeting.stakeBusiness},
+            sacrament_hymn =
+                ${JSON.stringify(meeting.sacramentHymn)}::jsonb,
+            speakers =
+                ${JSON.stringify(meeting.speakers)}::jsonb,
+            closing_hymn =
+                ${JSON.stringify(meeting.closingHymn)}::jsonb,
+            closing_prayer = ${meeting.closingPrayer}
+        WHERE id = ${id}
+        RETURNING *
+    `;
+
+    const row = (rows as unknown as MeetingRow[])[0];
+
+    return row ? mapMeeting(row) : null;
+}
+
+/**
+ * Deletes a sacrament meeting by its database ID.
+ */
+export async function deleteMeeting(
+    id: number
+): Promise<boolean> {
+    const rows = await sql`
+        DELETE FROM meetings
+        WHERE id = ${id}
+        RETURNING id
+    `;
+
+    return rows.length > 0;
 }
