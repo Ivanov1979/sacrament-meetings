@@ -1,8 +1,12 @@
+
 "use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { AuthError } from "next-auth";
+
+import { auth, signIn } from "@/auth";
 
 import {
     createMeeting as createMeetingDb,
@@ -82,6 +86,22 @@ const MeetingFormSchema = z.object({
 });
 
 /**
+ * Ensures the user is signed in before modifying meetings.
+ *
+ * If administrator roles are added later, this function
+ * should also check the user's permissions.
+ */
+async function requireAuthentication(): Promise<void> {
+    const session = await auth();
+
+    if (!session?.user) {
+        throw new Error(
+            "Unauthorized. Please sign in to manage meetings."
+        );
+    }
+}
+
+/**
  * Converts validated form data into the structure expected
  * by the database layer.
  */
@@ -129,6 +149,8 @@ function buildMeetingInput(
 export async function createMeeting(
     formData: FormData
 ): Promise<void> {
+    await requireAuthentication();
+
     const validatedFields = MeetingFormSchema.safeParse({
         date: formData.get("date"),
         meetingType: formData.get("meetingType"),
@@ -206,6 +228,8 @@ export async function updateMeeting(
     id: number,
     formData: FormData
 ): Promise<void> {
+    await requireAuthentication();
+
     if (!Number.isInteger(id) || id <= 0) {
         throw new Error("Invalid meeting ID.");
     }
@@ -321,6 +345,8 @@ export async function updateMeeting(
 export async function deleteMeeting(
     id: number
 ): Promise<void> {
+    await requireAuthentication();
+
     if (!Number.isInteger(id) || id <= 0) {
         throw new Error("Invalid meeting ID.");
     }
@@ -344,4 +370,32 @@ export async function deleteMeeting(
     }
 
     revalidatePath("/meetings");
+}
+
+/**
+ * Authenticates a user using Auth.js credentials.
+ *
+ * The form submits an email and password.
+ */
+export async function authenticate(
+    prevState: string | undefined,
+    formData: FormData
+): Promise<string | undefined> {
+    try {
+        await signIn("credentials", formData);
+    } catch (error) {
+        if (error instanceof AuthError) {
+            switch (error.type) {
+                case "CredentialsSignin":
+                    return "Invalid email or password.";
+
+                default:
+                    return "Something went wrong.";
+            }
+        }
+
+        // Auth.js uses redirects after successful sign-in.
+        // Re-throw redirect errors so Next.js handles them.
+        throw error;
+    }
 }

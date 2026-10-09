@@ -1,4 +1,6 @@
+
 import Link from "next/link";
+import { AuthStatus } from "@/components/auth-status";
 
 export default function Home() {
   return (
@@ -18,6 +20,11 @@ export default function Home() {
         >
           View Meetings
         </Link>
+
+        {/* Authentication controls */}
+        <div className="mt-8 flex justify-center">
+          <AuthStatus />
+        </div>
       </div>
     </main>
   );

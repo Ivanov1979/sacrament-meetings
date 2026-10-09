@@ -1,24 +1,72 @@
-import { redirect } from "next/navigation";
+
+import Link from "next/link";
 import { getMeetings } from "@/lib/meetings-db";
 
+export const dynamic = "force-dynamic";
+
 export default async function CurrentMeetingPage() {
-    const today = new Date();
+    try {
+        const today = new Date().toISOString().split("T")[0];
+        const meetings = await getMeetings(today);
+        const currentMeeting = meetings[0];
 
-    const sunday = new Date(today);
-    sunday.setDate(today.getDate() - today.getDay());
+        return (
+            <main className="mx-auto max-w-4xl px-6 py-10">
+                <h1 className="mb-6 text-3xl font-bold">
+                    Current Sacrament Meeting
+                </h1>
 
-    const sundayDate = [
-        sunday.getFullYear(),
-        String(sunday.getMonth() + 1).padStart(2, "0"),
-        String(sunday.getDate()).padStart(2, "0"),
-    ].join("-");
+                {!currentMeeting ? (
+                    <div className="rounded-lg border p-6">
+                        <p>No sacrament meeting is scheduled for today.</p>
+                        <Link
+                            href="/meetings"
+                            className="mt-4 inline-block text-blue-600 underline"
+                        >
+                            View all meetings
+                        </Link>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border p-6">
+                        <h2 className="mb-4 text-2xl font-semibold">
+                            Today's Meeting
+                        </h2>
 
-    const meetings = await getMeetings(sundayDate);
-    const meeting = meetings[0];
+                        <p className="mb-4">
+                            A sacrament meeting is scheduled for today.
+                        </p>
 
-    if (!meeting) {
-        redirect("/meetings");
+                        <Link
+                            href="/meetings"
+                            className="text-blue-600 underline"
+                        >
+                            View meeting details
+                        </Link>
+                    </div>
+                )}
+            </main>
+        );
+    } catch (error) {
+        console.error("Error loading current meeting:", error);
+
+        return (
+            <main className="mx-auto max-w-4xl px-6 py-10">
+                <h1 className="mb-6 text-3xl font-bold">
+                    Current Sacrament Meeting
+                </h1>
+
+                <p className="text-red-600">
+                    Unable to load the current meeting.
+                    Please try again later.
+                </p>
+
+                <Link
+                    href="/meetings"
+                    className="mt-4 inline-block text-blue-600 underline"
+                >
+                    View all meetings
+                </Link>
+            </main>
+        );
     }
-
-    redirect(`/meetings/${meeting.id}`);
 }
